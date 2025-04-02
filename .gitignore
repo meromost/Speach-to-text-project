@@ -60,12 +60,17 @@ venv.bak/
 *.swo
 
 # Model files (large binary files)
+# Keep smaller model files in repository
 *.bin
 *.pt
 *.onnx
-models/*
-!models/README.txt
+# models/*
+# !models/README.txt
 
 # Local configuration
 .env
-.env.* 
+.env.*
+
+# Large model files (> 100MB) - GitHub limitation
+# Keep JSON configuration and vocabulary files which are small
+models/**/*.bin 
