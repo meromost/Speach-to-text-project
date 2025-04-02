@@ -25,6 +25,23 @@ VALID_LANGUAGE_CODES = [
     "tr", "tt", "uk", "ur", "uz", "vi", "yi", "yo", "zh", "yue"
 ]
 
+def find_local_model():
+    """Search the models directory for valid model directories."""
+    models_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
+    if not os.path.exists(models_dir):
+        return None
+    
+    # Look for directories that might contain Whisper models
+    for dir_name in os.listdir(models_dir):
+        dir_path = os.path.join(models_dir, dir_name)
+        if os.path.isdir(dir_path):
+            # Check if this directory contains model.bin and config.json
+            if os.path.exists(os.path.join(dir_path, "model.bin")) and \
+               os.path.exists(os.path.join(dir_path, "config.json")):
+                return dir_path
+    
+    return None
+
 class AudioTranscriptionThread(QThread):
     transcription_done = pyqtSignal(str)
     status_update = pyqtSignal(str)
@@ -236,7 +253,9 @@ class SpeechToTextApp(QMainWindow):
         
         # Initialize the audio thread
         self.audio_thread = None
-        self.model_path = None
+        
+        # Automatically find local model
+        self.model_path = find_local_model()
         
         # Set up the UI
         self.setup_ui()
@@ -281,7 +300,13 @@ class SpeechToTextApp(QMainWindow):
         self.model_source_buttons = QButtonGroup()
         self.download_radio = QRadioButton("Download from HuggingFace")
         self.local_radio = QRadioButton("Use local model")
-        self.download_radio.setChecked(True)
+        
+        # Auto-select local model if found
+        if self.model_path:
+            self.local_radio.setChecked(True)
+        else:
+            self.download_radio.setChecked(True)
+            
         self.model_source_buttons.addButton(self.download_radio, 1)
         self.model_source_buttons.addButton(self.local_radio, 2)
         model_source_layout.addWidget(self.download_radio)
@@ -290,10 +315,15 @@ class SpeechToTextApp(QMainWindow):
         # Local model path selection
         local_path_layout = QHBoxLayout()
         self.local_path_edit = QLineEdit()
-        self.local_path_edit.setEnabled(False)
+        self.local_path_edit.setEnabled(self.local_radio.isChecked())
+        
+        # Set path if model was found
+        if self.model_path:
+            self.local_path_edit.setText(self.model_path)
+            
         self.local_path_edit.setPlaceholderText("Select local model directory...")
         self.browse_button = QPushButton("Browse...")
-        self.browse_button.setEnabled(False)
+        self.browse_button.setEnabled(self.local_radio.isChecked())
         self.browse_button.clicked.connect(self.browse_local_model)
         local_path_layout.addWidget(self.local_path_edit, 3)
         local_path_layout.addWidget(self.browse_button, 1)
@@ -339,6 +369,9 @@ class SpeechToTextApp(QMainWindow):
         precision_layout.addWidget(precision_label)
         precision_layout.addWidget(self.precision_combo)
         download_model_layout.addLayout(precision_layout)
+        
+        # Enable/disable based on selection
+        self.download_model_group.setEnabled(self.download_radio.isChecked())
         
         main_layout.addWidget(self.download_model_group)
         
@@ -502,6 +535,10 @@ class SpeechToTextApp(QMainWindow):
             self.local_path_edit.setEnabled(True)
             self.browse_button.setEnabled(True)
             self.download_model_group.setEnabled(False)
+            # Restore detected local model path if available
+            if not self.local_path_edit.text() and find_local_model():
+                self.model_path = find_local_model()
+                self.local_path_edit.setText(self.model_path)
     
     def browse_local_model(self):
         """Open file dialog to select local model directory"""
