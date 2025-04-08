@@ -1,0 +1,22 @@
+# Dark Mode UI Reference
+
+The dark mode UI reference shows a modern, sleek interface with:
+
+1. Main window:
+   - Title: "Speech-to-Text Writer"
+   - Dark background with rounded corners
+   - Dropdown for "Online Mode" in top-right
+   - Large central text area (presumably for transcribed text)
+   - Three control buttons at bottom: "Start" (orange), "Stop", and "Pause"
+
+2. Minimized/compact view:
+   - Settings gear icon on left
+   - "Online Mode" dropdown on right
+   - Audio waveform visualization in blue (indicating listening status)
+   - Dark background with rounded corners
+
+The UI uses a dark color scheme with:
+- Dark gray/black backgrounds
+- White text
+- Blue accent for visualization
+- Orange accent for primary action button 
