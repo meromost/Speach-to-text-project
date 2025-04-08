@@ -12,16 +12,18 @@ The project is currently in an early functional state with several limitations a
 - Basic UI with configuration options
 
 ### Recent Updates
+- **Dark Mode UI**: Implemented a new dark mode UI with both maximized and minimized views. This new interface offers improved visual aesthetics but has not yet been functionally integrated with the core speech recognition engine.
+- **Hugging Face Whisper Implementation**: Added support for online speech-to-text model using Hugging Face's Whisper implementation. This provides an alternative to the local model.
 - **Experimental UI Design**: A new modern UI has been designed with improved layout, better visual feedback, and enhanced usability. This UI is currently available as a separate file (improved_ui.py) but not yet integrated with the core functionality.
 
 ### Known Issues
 - **Transcription Accuracy**: Low accuracy in speech recognition, particularly in noisy environments
 - **Microphone Sensitivity**: Current microphone sensitivity settings are not optimal for all environments
-- **User Interface**: The current production UI is functional but basic. The experimental UI needs to be fully integrated with the speech recognition engine
+- **User Interface**: The new dark mode UI needs to be fully integrated with the speech recognition engine
 
 ### Planned Improvements
 1. **UI Integration**:
-   - Integrate the new experimental UI with the core speech recognition functionality
+   - Integrate the new dark mode UI with the core speech recognition functionality
    - Enhance the visual audio level monitoring
    - Implement session history features
    - Add resource usage monitoring
@@ -47,12 +49,13 @@ The project is currently in an early functional state with several limitations a
    - Optimize memory usage for larger models
 
 ### Next Steps
-1. Complete the integration of the new UI with the existing functionality
-2. Improve microphone sensitivity detection and auto-calibration
-3. Add support for additional language models and fine-tuning options
+1. Complete the integration of the new dark mode UI with the existing functionality
+2. Test and enhance the speech-to-text model recognition and accuracy
+3. Improve microphone sensitivity detection and auto-calibration
+4. Refine the Hugging Face Whisper implementation for better performance
 
 ### Conclusion
 The application provides basic functionality but requires significant refinement before it can be considered production-ready. Development is ongoing with a focus on improving the user interface, accuracy, and overall user experience.
 
 ---
-*Last updated: April 2, 2024* 
+*Last updated: April 8, 2024* 
