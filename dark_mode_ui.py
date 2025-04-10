@@ -4,7 +4,9 @@ import time
 import math  # Make sure the import is at the top
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QPushButton, QVBoxLayout, 
                             QHBoxLayout, QWidget, QLabel, QComboBox, QTextEdit,
-                            QFrame, QSizePolicy, QStackedWidget, QToolButton)
+                            QFrame, QSizePolicy, QStackedWidget, QToolButton,
+                            QGroupBox, QRadioButton, QButtonGroup, QLineEdit, QFileDialog,
+                            QCheckBox, QSlider, QProgressBar)
 from PyQt5.QtCore import Qt, QSize, QTimer, QPropertyAnimation, QEasingCurve, pyqtProperty, QRect
 from PyQt5.QtGui import QFont, QColor, QPalette, QPainter, QPen, QPainterPath, QIcon
 
@@ -243,54 +245,257 @@ class SpeechToTextApp(QMainWindow):
         normal_layout = QVBoxLayout(normal_ui)
         normal_layout.setSpacing(15)
         
-        # Header with title and mode selector
+        # Header with title (Removed old mode selector)
         header_layout = QHBoxLayout()
-        
-        # Title
         title_label = QLabel("Speech-to-Text Writer")
         title_label.setFont(QFont("Arial", 18, QFont.Bold))
         header_layout.addWidget(title_label)
-        
-        # Spacer
         header_layout.addStretch()
-        
-        # Mode selector
-        self.mode_selector = QComboBox()
-        self.mode_selector.addItems(["Online Mode", "Offline Mode"])
-        header_layout.addWidget(self.mode_selector)
-        
         normal_layout.addLayout(header_layout)
         
-        # Main text area panel
-        text_panel = RoundedPanel()
-        text_panel_layout = QVBoxLayout(text_panel)
+        # --- Status & Audio Level ---
+        status_audio_layout = QHBoxLayout()
+        self.status_label = QLabel("Ready") # General Status Label
+        self.status_label.setStyleSheet(f"color: {DarkTheme.TEXT_SECONDARY};")
+        status_audio_layout.addWidget(self.status_label)
+        status_audio_layout.addStretch()
         
-        self.text_edit = QTextEdit()
-        self.text_edit.setReadOnly(True)
-        self.text_edit.setPlaceholderText("Transcribed text will appear here...")
-        text_panel_layout.addWidget(self.text_edit)
+        audio_level_label = QLabel("Audio:")
+        audio_level_label.setStyleSheet(f"color: {DarkTheme.TEXT_SECONDARY}; margin-right: 5px;")
+        self.audio_level_progress = QProgressBar() # Audio Level Bar
+        self.audio_level_progress.setRange(0, 100)
+        self.audio_level_progress.setValue(0)
+        self.audio_level_progress.setTextVisible(False)
+        self.audio_level_progress.setFixedSize(100, 10) # Make it compact
+        self.audio_level_progress.setStyleSheet(f"""
+            QProgressBar {{
+                border: none;
+                border-radius: 5px;
+                background-color: {DarkTheme.BG_DARK};
+            }}
+            QProgressBar::chunk {{
+                background-color: {DarkTheme.ACCENT_SECONDARY};
+                border-radius: 5px;
+            }}
+        """)
+        status_audio_layout.addWidget(audio_level_label)
+        status_audio_layout.addWidget(self.audio_level_progress)
+        normal_layout.addLayout(status_audio_layout)
+
+        # --- Model Configuration Panel ---
+        model_config_panel = RoundedPanel() # Use the custom panel
+        model_config_layout = QVBoxLayout(model_config_panel)
+        model_config_layout.setSpacing(10)
         
-        normal_layout.addWidget(text_panel)
+        # Current Model Banner (Label)
+        self.current_model_label = QLabel("Model: Offline (Default)")
+        self.current_model_label.setStyleSheet(f"color: {DarkTheme.TEXT_SECONDARY}; padding-bottom: 5px;")
+        model_config_layout.addWidget(self.current_model_label)
         
-        # Control buttons
+        # Source Selection (Radio Buttons)
+        source_radio_layout = QHBoxLayout()
+        self.model_source_buttons = QButtonGroup()
+        self.online_radio = QRadioButton("Online (HuggingFace)")
+        self.offline_radio = QRadioButton("Offline (Local)")
+        self.online_radio.setStyleSheet(f"color: {DarkTheme.TEXT_SECONDARY};") # Style radio buttons
+        self.offline_radio.setStyleSheet(f"color: {DarkTheme.TEXT_SECONDARY};")
+        
+        self.model_source_buttons.addButton(self.online_radio, 1)
+        self.model_source_buttons.addButton(self.offline_radio, 2)
+        source_radio_layout.addWidget(self.online_radio)
+        source_radio_layout.addWidget(self.offline_radio)
+        source_radio_layout.addStretch()
+        model_config_layout.addLayout(source_radio_layout)
+        
+        # --- Online (HuggingFace) Model Widgets ---
+        self.online_model_widget = QWidget() # Container to show/hide
+        online_model_layout = QHBoxLayout()
+        online_model_layout.setContentsMargins(0, 5, 0, 0) # Add some top margin
+        self.online_model_widget.setLayout(online_model_layout)
+        
+        hf_model_label = QLabel("Model:")
+        hf_model_label.setStyleSheet(f"color: {DarkTheme.TEXT_PRIMARY};")
+        self.hf_model_combo = QComboBox()
+        self.hf_model_combo.addItems(["tiny", "base", "small", "medium", "large-v3", "distil-large-v3"]) # Example models
+        self.hf_model_combo.setCurrentText("small") # Default
+        # Styling for QComboBox is handled globally in __init__
+        
+        # Device selection
+        device_label = QLabel("Device:")
+        device_label.setStyleSheet(f"color: {DarkTheme.TEXT_PRIMARY}; margin-left: 15px;")
+        self.device_combo = QComboBox()
+        self.device_combo.addItems(["cpu", "cuda", "auto"])
+        self.device_combo.setCurrentText("auto")
+        
+        # Precision selection
+        precision_label = QLabel("Precision:")
+        precision_label.setStyleSheet(f"color: {DarkTheme.TEXT_PRIMARY}; margin-left: 15px;")
+        self.precision_combo = QComboBox()
+        self.precision_combo.addItems(["float16", "int8"])
+        self.precision_combo.setCurrentText("int8")
+
+        online_model_layout.addWidget(hf_model_label)
+        online_model_layout.addWidget(self.hf_model_combo)
+        online_model_layout.addWidget(device_label)
+        online_model_layout.addWidget(self.device_combo)
+        online_model_layout.addWidget(precision_label)
+        online_model_layout.addWidget(self.precision_combo)
+        online_model_layout.addStretch()
+        model_config_layout.addWidget(self.online_model_widget)
+        
+        # --- Offline (Local) Model Widgets ---
+        self.offline_model_widget = QWidget() # Container to show/hide
+        offline_model_layout = QHBoxLayout()
+        offline_model_layout.setContentsMargins(0, 5, 0, 0) # Add some top margin
+        self.offline_model_widget.setLayout(offline_model_layout)
+        
+        local_path_label = QLabel("Path:")
+        local_path_label.setStyleSheet(f"color: {DarkTheme.TEXT_PRIMARY};")
+        self.local_path_edit = QLineEdit()
+        self.local_path_edit.setPlaceholderText("Path to local model...")
+        self.local_path_edit.setStyleSheet(f"""
+            QLineEdit {{ 
+                background-color: {DarkTheme.BG_DARK}; 
+                color: {DarkTheme.TEXT_PRIMARY}; 
+                border: 1px solid {DarkTheme.BG_PANEL}; 
+                border-radius: 6px; 
+                padding: 5px;
+            }}
+        """)
+        self.browse_button = RoundedButton("Browse...", primary=False)
+        # self.browse_button.clicked.connect(self.browse_local_model) # Placeholder connection
+        
+        offline_model_layout.addWidget(local_path_label)
+        offline_model_layout.addWidget(self.local_path_edit, 1)
+        offline_model_layout.addWidget(self.browse_button)
+        model_config_layout.addWidget(self.offline_model_widget)
+        
+        normal_layout.addWidget(model_config_panel) # Add the panel to the main layout
+        
+        # --- Transcription Output Panel ---
+        output_panel = RoundedPanel()
+        output_layout = QVBoxLayout(output_panel)
+        self.transcription_label = QLabel("Transcription output will appear here...")
+        self.transcription_label.setStyleSheet(f"color: {DarkTheme.TEXT_SECONDARY}; padding: 10px;")
+        self.transcription_label.setWordWrap(True)
+        output_layout.addWidget(self.transcription_label)
+        normal_layout.addWidget(output_panel)
+
+        # --- Quality & Context Settings Panel ---
+        settings_panel = RoundedPanel()
+        settings_layout = QVBoxLayout(settings_panel)
+        settings_layout.setSpacing(10)
+
+        # Quality Settings
+        quality_label = QLabel("Quality Settings")
+        quality_label.setStyleSheet("font-weight: bold;")
+        settings_layout.addWidget(quality_label)
+
+        quality_checkbox_layout = QHBoxLayout()
+        self.high_quality_checkbox = QCheckBox("High Quality")
+        self.noise_reduction_checkbox = QCheckBox("Noise Reduction")
+        self.vad_checkbox = QCheckBox("VAD")
+        for cb in [self.high_quality_checkbox, self.noise_reduction_checkbox, self.vad_checkbox]:
+            cb.setStyleSheet(f"color: {DarkTheme.TEXT_SECONDARY};")
+            quality_checkbox_layout.addWidget(cb)
+        quality_checkbox_layout.addStretch()
+        settings_layout.addLayout(quality_checkbox_layout)
+
+        # Context Slider
+        context_layout = QHBoxLayout()
+        context_label = QLabel("Context Window:")
+        context_label.setStyleSheet(f"color: {DarkTheme.TEXT_SECONDARY};")
+        self.context_slider = QSlider(Qt.Horizontal)
+        self.context_slider.setRange(0, 5)
+        self.context_slider.setValue(3)
+        self.context_value_label = QLabel("3")
+        self.context_value_label.setStyleSheet(f"color: {DarkTheme.TEXT_SECONDARY}; min-width: 15px;")
+        # self.context_slider.valueChanged.connect(lambda val: self.context_value_label.setText(str(val))) # Example connection
+        context_layout.addWidget(context_label)
+        context_layout.addWidget(self.context_slider)
+        context_layout.addWidget(self.context_value_label)
+        settings_layout.addLayout(context_layout)
+
+        # Sensitivity Slider & Calibration
+        mic_sensitivity_layout = QHBoxLayout()
+        mic_sensitivity_label = QLabel("Mic Sensitivity:")
+        mic_sensitivity_label.setStyleSheet(f"color: {DarkTheme.TEXT_SECONDARY};")
+        self.mic_sensitivity_slider = QSlider(Qt.Horizontal)
+        self.mic_sensitivity_slider.setRange(1, 20) 
+        self.mic_sensitivity_slider.setValue(10)
+        self.mic_sensitivity_value = QLabel("50%") # Placeholder label
+        self.mic_sensitivity_value.setStyleSheet(f"color: {DarkTheme.TEXT_SECONDARY}; min-width: 30px;")
+        # self.mic_sensitivity_slider.valueChanged.connect(lambda val: self.mic_sensitivity_value.setText(f"{int(val/20*100)}%")) # Example connection
+        self.calibrate_button = RoundedButton("Calibrate", primary=False)
+        mic_sensitivity_layout.addWidget(mic_sensitivity_label)
+        mic_sensitivity_layout.addWidget(self.mic_sensitivity_slider)
+        mic_sensitivity_layout.addWidget(self.mic_sensitivity_value)
+        mic_sensitivity_layout.addWidget(self.calibrate_button)
+        settings_layout.addLayout(mic_sensitivity_layout)
+        
+        # Context/Prompt Settings
+        context_settings_label = QLabel("Transcription Context")
+        context_settings_label.setStyleSheet("font-weight: bold; margin-top: 10px;")
+        settings_layout.addWidget(context_settings_label)
+
+        prompt_layout = QHBoxLayout()
+        prompt_label = QLabel("Initial Prompt:")
+        prompt_label.setStyleSheet(f"color: {DarkTheme.TEXT_SECONDARY};")
+        self.prompt_edit = QLineEdit()
+        self.prompt_edit.setPlaceholderText("Optional context...")
+        self.prompt_edit.setStyleSheet(f"""
+            QLineEdit {{ 
+                background-color: {DarkTheme.BG_DARK}; 
+                color: {DarkTheme.TEXT_PRIMARY}; 
+                border: 1px solid {DarkTheme.BG_PANEL}; 
+                border-radius: 6px; 
+                padding: 5px;
+            }}
+        """)
+        prompt_layout.addWidget(prompt_label)
+        prompt_layout.addWidget(self.prompt_edit)
+        settings_layout.addLayout(prompt_layout)
+
+        normal_layout.addWidget(settings_panel)
+
+        # --- Main Control Buttons ---
         buttons_layout = QHBoxLayout()
         buttons_layout.setSpacing(10)
-        
-        # Spacer to center buttons
-        buttons_layout.addStretch()
-        
+        buttons_layout.addStretch() # Center buttons
         self.start_button = RoundedButton("Start", primary=True)
         self.stop_button = RoundedButton("Stop", primary=False)
         self.pause_button = RoundedButton("Pause", primary=False)
-        
         buttons_layout.addWidget(self.start_button)
         buttons_layout.addWidget(self.stop_button)
         buttons_layout.addWidget(self.pause_button)
-        
-        # Spacer to center buttons
-        buttons_layout.addStretch()
-        
+        buttons_layout.addStretch() # Center buttons
         normal_layout.addLayout(buttons_layout)
+
+        # --- Other Controls & Apply Button ---
+        controls_apply_layout = QHBoxLayout()
+        
+        # Checkboxes
+        self.auto_type_checkbox = QCheckBox("Auto-type")
+        self.debug_checkbox = QCheckBox("Debug Mode")
+        self.auto_type_checkbox.setStyleSheet(f"color: {DarkTheme.TEXT_SECONDARY};")
+        self.debug_checkbox.setStyleSheet(f"color: {DarkTheme.TEXT_SECONDARY};")
+        controls_apply_layout.addWidget(self.auto_type_checkbox)
+        controls_apply_layout.addWidget(self.debug_checkbox)
+        controls_apply_layout.addStretch()
+        
+        # Test Typing Button
+        self.test_typing_button = RoundedButton("Test Typing", primary=False)
+        controls_apply_layout.addWidget(self.test_typing_button)
+
+        # Apply Button
+        self.apply_button = RoundedButton("Apply Settings", primary=False)
+        # self.apply_button.clicked.connect(self.apply_model_settings) # Placeholder connection
+        controls_apply_layout.addWidget(self.apply_button)
+        
+        normal_layout.addLayout(controls_apply_layout)
+
+        # Add stretch to push buttons down (MOVED to after other controls)
+        # normal_layout.addStretch()
         
         # Add minimize UI button
         minimize_layout = QHBoxLayout()
@@ -312,6 +517,15 @@ class SpeechToTextApp(QMainWindow):
         minimize_layout.addWidget(self.minimize_ui_button)
         
         normal_layout.addLayout(minimize_layout)
+        
+        # Set initial state (e.g., default to Online)
+        self.online_radio.setChecked(True)
+        self.online_model_widget.setVisible(True)
+        self.offline_model_widget.setVisible(False)
+        
+        # Connect radio button signals AFTER setting initial state
+        self.online_radio.toggled.connect(self.toggle_model_source)
+        # self.offline_radio is implicitly handled by the button group
         
         # Add to stacked widget
         self.stacked_widget.addWidget(normal_ui)
@@ -440,19 +654,29 @@ class SpeechToTextApp(QMainWindow):
             # Switch to normal UI
             self.stacked_widget.setCurrentIndex(0)
             self.is_minimized_ui = False
-            # Restore to normal size
-            self.main_layout.setContentsMargins(20, 20, 20, 20)  # Restore original margins
+            self.main_layout.setContentsMargins(20, 20, 20, 20)
             self.resize(800, 500)
             self.setMinimumSize(800, 500)
         else:
             # Switch to minimized UI
             self.stacked_widget.setCurrentIndex(1)
             self.is_minimized_ui = True
-            # Set small margins
             self.main_layout.setContentsMargins(4, 4, 4, 4)
-            # Resize to smaller window and set fixed size
-            self.setMinimumSize(10, 10)  # Allow smaller minimum size
-            self.resize(self.minimized_size)  # Use the stored minimized size
+            self.setMinimumSize(10, 10)
+            self.resize(self.minimized_size)
+            
+    def toggle_model_source(self):
+        is_online = self.online_radio.isChecked()
+        self.online_model_widget.setVisible(is_online)
+        self.offline_model_widget.setVisible(not is_online)
+        
+        # Update banner text (example)
+        if is_online:
+            current_hf_model = self.hf_model_combo.currentText()
+            self.current_model_label.setText(f"Model: Online ({current_hf_model})")
+        else:
+            current_local_path = self.local_path_edit.text() or "Not selected"
+            self.current_model_label.setText(f"Model: Offline ({current_local_path})")
             
     def toggle_listening(self):
         if self.audio_visualizer.active:
@@ -463,27 +687,18 @@ class SpeechToTextApp(QMainWindow):
             self.mini_start_button.setText("⏸")
             
     def start_listening(self):
-        if not self.is_minimized_ui:
-            self.text_edit.append("Listening started...")
-            
         self.audio_visualizer.start_animation()
         self.status_indicator.setStyleSheet(f"color: {DarkTheme.ACCENT_PRIMARY};")
         self.status_text.setText("Listening")
         self.status_text.setStyleSheet(f"color: {DarkTheme.ACCENT_PRIMARY}; font-size: 10px;")
         
     def stop_listening(self):
-        if not self.is_minimized_ui:
-            self.text_edit.append("Listening stopped.")
-            
         self.audio_visualizer.stop_animation()
         self.status_indicator.setStyleSheet(f"color: {DarkTheme.TEXT_SECONDARY};")
         self.status_text.setText("Not listening")
         self.status_text.setStyleSheet(f"color: {DarkTheme.TEXT_SECONDARY}; font-size: 10px;")
         
     def pause_listening(self):
-        if not self.is_minimized_ui:
-            self.text_edit.append("Listening paused.")
-            
         self.stop_listening()
         self.status_text.setText("Paused")
 
