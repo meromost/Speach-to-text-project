@@ -54,5 +54,21 @@ The project is currently in an early functional state with several limitations a
 ### Conclusion
 The application provides basic functionality but requires significant refinement before it can be considered production-ready. Development is ongoing with a focus on improving the user interface, accuracy, and overall user experience.
 
+## Current Status & Next Steps (as of 2025-04-10)
+
+*   **DONE:** Integrated the new dark mode UI (`dark_mode_ui.py`) into the main application (`whisper_typing.py`).
+*   **DONE:** Added back the minimized/compact UI view with a toggle button.
+*   **ISSUE:** Transcription appears to freeze or stop unexpectedly after running for a short period. This needs investigation (potential causes: audio buffering, thread interaction, resource leak?).
+*   **MINOR ISSUE:** Adjust layout/spacing in minimized UI header (visualizer vs. toggle button).
+*   **MINOR ISSUE:** Refine position/alignment of toggle button in main UI header.
+*   **NEXT:** Investigate and fix the transcription freezing issue.
+*   **NEXT:** Address minor UI layout issues when time permits.
+
+## Development Log
+
+*   **2025-04-10:** Attempted to adjust toggle button layout and minimized view spacing. Issues remain.
+*   **2025-04-10:** Integrated dark mode UI. Successfully connects signals and basic functionality works. Added minimized view toggle. Encountered transcription freezing/stopping bug.
+*   **... (Previous log entries) ...**
+
 ---
-*Last updated: April 2, 2024* 
+*Last updated: 2025-04-10* 
